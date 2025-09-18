@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediTrack for Kids: Rewards</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f0f4f8, #ffffff);
+      font-family: 'Open Sans', sans-serif;
+      color: #343A40;
+      min-height: 100vh;
+    }
+    .navbar {
+      background: #ffffff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 1rem 0;
+    }
+    .nav-links {
+      list-style-type: none;
+      display: flex;
+      gap: 25px;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      color: #343A40;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease, transform 0.2s ease;
+    }
+    .nav-links a:hover {
+      color: #DC3545;
+      transform: scale(1.05);
+    }
+    .navbar-brand {
+      color: #DC3545;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      margin-left: auto;
+    }
+    .header {
+      font-family: 'Poppins', sans-serif;
+      color: #DC3545;
+      margin-bottom: 1.5rem;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    .reward-table {
+      margin-top: 20px;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #E9ECEF;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+    tr:hover {
+      background-color: #f0f4f8;
+      transition: background-color 0.3s ease;
+    }
+    .total {
+      margin-top: 20px;
+      font-weight: 700;
+      color: #28a745;
+    }
+    .chart-container {
+      margin-top: 20px;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+      height: 300px; /* Fixed height to control chart size */
+      position: relative;
+    }
+    canvas {
+      max-width: 100%;
+      height: 100% !important; /* Ensure canvas respects container height */
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .chart-btn {
+      background-color: #DC3545;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 15px;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .chart-btn:hover {
+      background-color: #C82333;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="profile.html">Profiles</a></li>
+        <li><a href="logs.html">Logs</a></li>
+        <li><a href="rewards.html">Rewards</a></li>
+      </ul>
+      <a class="navbar-brand" href="#">MediTrack</a>
+    </div>
+  </nav>
+  <div class="container py-5 text-center">
+    <h1 class="header">Rewards Dashboard</h1>
+    <p class="text-muted mb-4">See your kid's earned rewards!</p>
+    <table class="reward-table" id="reward-table">
+      <thead>
+        <tr>
+          <th>Child</th>
+          <th>Completed Courses</th>
+          <th>Tokens Earned</th>
+        </tr>
+      </thead>
+      <tbody id="reward-body"></tbody>
+    </table>
+    <div class="total" id="total-rewards">Total Tokens: 0</div>
+    <div class="chart-container">
+      <button class="chart-btn" onclick="renderChart()">Show Chart</button>
+      <canvas id="reward-chart"></canvas>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script>
+    // Load profiles and logs from localStorage
+    let profiles = JSON.parse(localStorage.getItem('mediTrackProfiles')) || [
+      { name: "Child 1", age: 8, med: "Amoxicillin", progress: 0 },
+      { name: "Child 2", age: 10, med: "Paracetamol", progress: 0 }
+    ];
+    let logs = JSON.parse(localStorage.getItem('mediTrackLogs')) || [];
+    console.log("Loaded profiles:", profiles, "Loaded logs:", logs); // Debug log
+
+    // Calculate rewards
+    function calculateRewards() {
+      console.log("Calculating rewards with logs:", logs);
+      const rewards = {};
+      profiles.forEach(profile => rewards[profile.name] = 0);
+
+      profiles.forEach(profile => {
+        const childLogs = logs.filter(l => l.child === profile.name);
+        console.log(`${profile.name} Logs:`, childLogs);
+        if (childLogs.length >= 3) {
+          const courses = Math.floor(childLogs.length / 3);
+          rewards[profile.name] += courses * 10;
+          // Clear completed logs
+          logs = logs.filter(l => !childLogs.slice(0, courses * 3).includes(l));
+          localStorage.setItem('mediTrackLogs', JSON.stringify(logs));
+        }
+      });
+
+      console.log("Calculated Rewards:", rewards);
+      return rewards;
+    }
+
+    // Load rewards into table
+    function loadRewards() {
+      const rewardBody = document.getElementById('reward-body');
+      if (!rewardBody) {
+        console.error("Reward body element not found!");
+        return;
+      }
+      rewardBody.innerHTML = '';
+      const rewards = calculateRewards();
+      let totalTokens = 0;
+
+      if (Object.values(rewards).every(r => r === 0)) {
+        rewardBody.innerHTML = '<tr><td colspan="3" class="text-muted">No rewards yet. Complete a course on the Profile page!</td></tr>';
+      } else {
+        profiles.forEach(profile => {
+          const tokens = rewards[profile.name] || 0;
+          totalTokens += tokens;
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${profile.name}</td><td>${Math.floor(tokens / 10)}</td><td>${tokens}</td>`;
+          rewardBody.appendChild(row);
+        });
+      }
+
+      document.getElementById('total-rewards').textContent = `Total Tokens: ${totalTokens}`;
+    }
+
+    // Render chart
+    let chartInstance = null;
+    function renderChart() {
+      const rewards = calculateRewards();
+      console.log("Chart Data:", { labels: profiles.map(p => p.name), data: profiles.map(p => rewards[p.name] || 0) });
+      const ctx = document.getElementById('reward-chart').getContext('2d');
+      if (!ctx) {
+        console.error("Canvas context not found!");
+        return;
+      }
+
+      if (chartInstance) {
+        chartInstance.destroy();
+        console.log("Destroyed previous chart instance");
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: profiles.map(p => p.name),
+          datasets: [{
+            label: 'Tokens Earned',
+            data: profiles.map(p => rewards[p.name] || 0),
+            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+            borderColor: 'rgba(220, 53, 69, 1)',
+            borderWidth: 2,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false, // Allow custom sizing
+          aspectRatio: 2, // Control aspect ratio to prevent excessive height
+          layout: {
+            padding: 10
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Tokens', color: '#343A40' },
+              ticks: { color: '#343A40', maxTicksLimit: 5 }, // Limit tick marks
+              grace: 10 // Add some padding at the top
+            },
+            x: { ticks: { color: '#343A40' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#343A40' } }
+          }
+        }
+      });
+      console.log("New chart rendered");
+      gsap.from(ctx.canvas, { duration: 0.6, opacity: 0, scale: 0.9, ease: "back.out(1.7)" });
+    }
+
+    // Initial load with animation
+    document.addEventListener('DOMContentLoaded', () => {
+      gsap.from(".reward-table", { duration: 0.6, opacity: 0, y: 20, ease: "power2.out" });
+      loadRewards();
+    });
+  </script>
+</body>
+</html>
